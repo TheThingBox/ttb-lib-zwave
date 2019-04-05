@@ -5,6 +5,7 @@ const isUtf8 = require('is-utf8')
 var ZWAVE = function(options = {}){
   this.zTopic = options.topic || 'zwave'
   this.zBroker = options.broker || 'MQTT.Localhost'
+  this.zMqtt = null
   this.devicePath = options.devicePath || "/dev/ttyACM0"
   this.skaleTagletHost = options.skaleTagletHost || "https://home-keeper.io/taglets"
 
@@ -27,6 +28,15 @@ ZWAVE.prototype.init = function(node){
   if(node.topic){
     this.zTopic = node.topic
   }
+  if(node.brokerConn){
+    this.zMqtt = node.brokerConn
+  }
+  if(node.log && typeof node.log === 'function'){
+    this.log = node.log
+  }
+  if(node.warn && typeof node.warn === 'function'){
+    this.warn = node.warn
+  }
   return new Promise( (resolve, reject) => {
     var rejected = false
     this._zwave.removeAllListeners()
@@ -39,42 +49,42 @@ ZWAVE.prototype.init = function(node){
 
     this._zwave.on('driver ready', homeid => {
       this.zConnected = true
-      this.zDriverReady(node, homeid)
+      this._driverReady(homeid)
     })
 
     this._zwave.on('driver failed', () => {
       this.zConnected = false
-      this.zDriverFailed(node)
+      this._driverFailed()
       rejected = true
       reject('driver failed')
     })
 
     this._zwave.on('node added', (nodeid) => {
-      this.zNodeAdded(nodeid)
+      this._nodeAdded(nodeid)
     })
 
     this._zwave.on('node ready', (nodeid, nodeinfo) => {
-      this.zNodeReady(node, nodeid, nodeinfo)
+      this._nodeReady(nodeid, nodeinfo)
     })
 
     this._zwave.on('value added', (nodeid, comclass, value) => {
-      this.zValueAdded(node, nodeid, comclass, value)
+      this._valueAdded(nodeid, comclass, value)
     })
 
     this._zwave.on('value changed', (nodeid, comclass, value) => {
-      this.zValueChanged(node, nodeid, comclass, value)
+      this._valueChanged(nodeid, comclass, value)
     })
 
     this._zwave.on('value removed', (nodeid, comclass, index) => {
-      this.zValueRemoved(node, nodeid, comclass, index)
+      this._valueRemoved(nodeid, comclass, index)
     })
 
     this._zwave.on('scene event', (nodeid, sceneid) => {
-      this.zSceneEvent(node, nodeid, sceneid)
+      this._sceneEvent(nodeid, sceneid)
     })
 
     this._zwave.on('notification', (nodeid, notif) => {
-      this.zNotification(node, nodeid, notif)
+      this._notification(nodeid, notif)
     })
 
     this._zwave.on('scan complete', () => {
@@ -90,6 +100,25 @@ ZWAVE.prototype.init = function(node){
   })
 }
 
+ZWAVE.prototype.publish = function(topic, payload = "", qos = 0, retain = false){
+  if(this.zMqtt){
+    this.zMqtt.publish({
+      qos: qos,
+      retain: retain,
+      topic: topic,
+      payload: payload
+    })
+  }
+}
+
+ZWAVE.prototype.log = function(...args){
+  console.log(ZWAVE.timestamp(), '- [info] [ttb-lib-flows]',...args)
+}
+
+ZWAVE.prototype.warn = function(...args){
+  console.log(ZWAVE.timestamp(), '- [warn] [ttb-lib-flows]',...args)
+}
+
 ZWAVE.prototype.addNewNode = function(nodes){
   return new Promise( (resolve, reject) => {
     this.libFlows.getFlowFromNode({"type": "zwave"})
@@ -101,17 +130,24 @@ ZWAVE.prototype.addNewNode = function(nodes){
       }
     })
     .then(added => {
-      if(added){
-        resolve()
-      } else {
-        throw new Error('nodes not added')
-      }
+      resolve()
     })
     .catch(reject)
   })
 }
 
-ZWAVE.prototype.zNewDevice = function(nodeid, nodeinfo) {
+ZWAVE.prototype.comclassShowable = function(comclass) {
+  if(ZWAVE.COMCLASS_TO_HIDE.indexOf(comclass) !== -1) {
+    return false
+  }
+  return true
+}
+
+ZWAVE.prototype.getComclassToHide = function(){
+  return ZWAVE.COMCLASS_TO_HIDE.slice()
+}
+
+ZWAVE.prototype._newDevice = function(nodeid, nodeinfo) {
   const manufacturerid = nodeinfo.manufacturerid.slice(2, nodeinfo.manufacturerid.length);
   const producttype = nodeinfo.producttype.slice(2, nodeinfo.producttype.length);
   const productid = nodeinfo.productid.slice(2, nodeinfo.productid.length);
@@ -123,40 +159,41 @@ ZWAVE.prototype.zNewDevice = function(nodeid, nodeinfo) {
     productname: nodeinfo.manufacturer + " - " + nodeinfo.product
   };
 
-  this.zFillNode(node, productIDTotal)
-  this.zPrepareNode(node)
+  this._fillNode(node, productIDTotal)
+  node = this._prepareNode(node)
 
-  this.prototype.addNewNode(node)
+  this.addNewNode(node)
 }
 
-ZWAVE.prototype.zDumpNodes = function(){
-  node.log("--- ZWave Dongle ---------------------");
+ZWAVE.prototype._dumpNodes = function(){
+  this.log("--- ZWave Dongle ---------------------");
   for(var i = 1; i < this.zNodes.length; i++) {
     if(this.zNodes[i] === null || typeof this.zNodes[i] === 'undefined'){
-      node.log(`    node: [${i}] empty`);
+      this.log(`    [zwave-node:${i}] : empty`);
       continue;
     }
     if(this.zNodes[i].hasOwnProperty("ready") && this.zNodes[i].ready === true) {
-      node.log(`    node: [${i}] : ${nodes[i].toString()}`);
+      this.log(`    [zwave-node:${i}] : ${this.zNodes[i].toString()}`);
     } else {
-      var alive=" ";
-      if(Object.keys(nodes[i].classes).length > 1){
+      var alive="";
+      if(Object.keys(this.zNodes[i].classes).length > 1){
         alive = "alive but ";
       }
-      node.log(`    node: [${i}] : ${alive}no infos yet`);
+      this.log(`    [zwave-node:${i}] : ${alive}no infos yet`);
     }
   }
-  node.log("--------------------------------------");
+  this.log("--------------------------------------");
 }
 
-ZWAVE.prototype.zPrepareNode = function(node){
-  if(node.commandclass !== undefined && node.classindex !== undefined && this.zNodes[nodeid].classes[node.commandclass] !== undefined && this.zNodes[nodeid].classes[node.commandclass][node.classindex] !== undefined) {
-    node.classindexname = this.zNodes[nodeid].classes[node.commandclass][node.classindex].label;
+ZWAVE.prototype._prepareNode = function(node){
+  if(node.commandclass !== undefined && node.classindex !== undefined && this.zNodes[node.senderID].classes[node.commandclass] !== undefined && this.zNodes[node.senderID].classes[node.commandclass][node.classindex] !== undefined) {
+    node.classindexname = this.zNodes[node.senderID].classes[node.commandclass][node.classindex].label;
   }
 
   node = {
-    id: LibFlows.generateNodeID(),
+    id: this.libFlows.generateNodeID(),
     name: "",
+    x: 270,
     productname: node.productname,
     classindexname: node.classindexname,
     nodeid: node.senderID,
@@ -181,37 +218,15 @@ ZWAVE.prototype.zPrepareNode = function(node){
     node.broker = this.zBroker
   }
 
-  var taglet
-  switch(node.typeNode) {
-    case "zwave-binary-switch":
-      taglet = "switch";
-      break;
-
-    case "zwave-light-dimmer-switch":
-      taglet = "light";
-      break;
-
-    case "zwave-remote-control-multi-purpose":
-    case "nodonSoftRemote":
-      taglet = "remote";
-      break;
-
-    case "zwave-motion-sensor":
-    case "zwave-binary-sensor":
-    case "aeotecMultiSensor":
-      taglet = "motion";
-      break;
-
-    default:
-        break;
-  }
+  var taglet = ZWAVE.getTagletSkale(node.typeNode)
 
   if(taglet){
     node.extra.skale = `${this.skaleTagletHost}/com.daw.${taglet}.taglet`
   }
+  return node
 }
 
-ZWAVE.prototype.zFillNode = function(node, productid){
+ZWAVE.prototype._fillNode = function(node, productid){
   switch (productid) {
     case "0086-0003-0062": // Aeotec, ZW098 LED Bulb
     case "0086-0103-0062": // Aeotec, ZW098 LED Bulb
@@ -307,16 +322,16 @@ ZWAVE.prototype.zFillNode = function(node, productid){
   }
 }
 
-ZWAVE.prototype.zDriverReady = function (node, homeid) {
-  node.log('Driver ready');
-  node.log('Scanning homeid=0x' + homeid.toString(16) + '...');
+ZWAVE.prototype._driverReady = function (homeid) {
+  this.log('Driver ready');
+  this.log('Scanning homeid=0x' + homeid.toString(16) + '...');
 }
 
-ZWAVE.prototype.zDriverFailed = function(node) {
-  node.warn('Failed to start Z-wave driver');
+ZWAVE.prototype._driverFailed = function() {
+  this.warn('Failed to start Z-wave driver');
 }
 
-ZWAVE.prototype.zNodeAdded = function(nodeid) {
+ZWAVE.prototype._nodeAdded = function(nodeid) {
   this.zNodes[nodeid] = {
     manufacturer: '',
     manufacturerid: '',
@@ -327,14 +342,14 @@ ZWAVE.prototype.zNodeAdded = function(nodeid) {
     name: '',
     loc: '',
     classes: {},
-    ready: false
-  };
-  this.zNodes[nodeid].prototype.toString = function(){
-    return `${this.manufacturer} ${this.product} (${this.type} '${this.manufacturerid}-${this.producttype}-${this.productid}')`
+    ready: false,
+    toString: function(){
+      return `${this.manufacturer} ${this.product} (${this.type} '${this.manufacturerid}-${this.producttype}-${this.productid}')`
+    }
   }
 }
 
-ZWAVE.prototype.zNodeReady = function(node, nodeid, nodeinfo) {
+ZWAVE.prototype._nodeReady = function(nodeid, nodeinfo) {
   this.zNodes[nodeid].manufacturer = nodeinfo.manufacturer;
   this.zNodes[nodeid].manufacturerid = nodeinfo.manufacturerid;
   this.zNodes[nodeid].product = nodeinfo.product;
@@ -344,11 +359,11 @@ ZWAVE.prototype.zNodeReady = function(node, nodeid, nodeinfo) {
   this.zNodes[nodeid].name = nodeinfo.name;
   this.zNodes[nodeid].loc = nodeinfo.loc;
   this.zNodes[nodeid].ready = true;
-  node.log(`node [${nodeid}] ready: ${this.zNodes[nodeid].toString()}`)
+  this.log(`[zwave-node:${nodeid}] ready: ${this.zNodes[nodeid].toString()}`)
 
   if(nodeinfo.manufacturer && nodeinfo.product){
     if(nodeid !== 1) {
-      this.zNewDevice(nodeid, nodeinfo);
+      this._newDevice(nodeid, nodeinfo);
     }
 
     for(var comclass in this.zNodes[nodeid].classes) {
@@ -357,21 +372,14 @@ ZWAVE.prototype.zNodeReady = function(node, nodeid, nodeinfo) {
       }
     }
 
-    this.zDumpNodes()
+    this._dumpNodes()
   }
 
-  if(node.brokerConn) {
-    node.brokerConn.publish({
-      'qos': 0,
-      'retain': false,
-      'topic': `${this.zTopic}/nodeready/${nodeid}`,
-      'payload': true
-    });
-  }
+  this.publish(`${this.zTopic}/nodeready/${nodeid}`, true)
 }
 
-ZWAVE.prototype.zValueAdded = function(node, nodeid, comclass, value) {
-  node.log(`node [${nodeid}] value added: comclass=${comclass}, value[${value.index}].${value.label}=${value.value}`)
+ZWAVE.prototype._valueAdded = function(nodeid, comclass, value) {
+  this.log(`[zwave-node:${nodeid}] value added: comclass=${comclass}; value[${value.index}]['${value.label}']=${value.value}`)
 
   if(!this.zNodes[nodeid].classes[comclass]) {
     this.zNodes[nodeid].classes[comclass] = {};
@@ -379,91 +387,60 @@ ZWAVE.prototype.zValueAdded = function(node, nodeid, comclass, value) {
 
   this.zNodes[nodeid].classes[comclass][value.index] = value;
 
-  if(node.brokerConn) {
-    node.brokerConn.publish({
-      'qos': 0,
-      'retain': false,
-      'topic': `${node.topic}/${nodeid}/${comclass}/${value.index}`,
-      'payload': value.value
-    });
-  }
+  this.publish(`${this.zTopic}/${nodeid}/${comclass}/${value.index}`, value.value)
 }
 
-ZWAVE.prototype.zValueChanged = function(node, nodeid, comclass, value) {
+ZWAVE.prototype._valueChanged = function(nodeid, comclass, value) {
   if(this.zNodes[nodeid].classes[comclass][value.index].value !== undefined && value.value !== this.zNodes[nodeid].classes[comclass][value.index].value) {
     this.zNodes[nodeid].classes[comclass][value.index] = value;
 
-    if(node.brokerConn){
-       node.brokerConn.publish({
-        'qos': 0,
-        'retain': false,
-        'topic': `${node.topic}/${nodeid}/${comclass}/${value.index}`,
-        'payload': value.value
-      });
-    }
+    this.publish(`${this.zTopic}/${nodeid}/${comclass}/${value.index}`, value.value)
   }
 }
 
-ZWAVE.prototype.zValueRemoved = function(node, nodeid, comclass, index) {
-  node.log(`node [${nodeid}] value removed: comclass=${comclass}, value[${value.index}]`)
+ZWAVE.prototype._valueRemoved = function(nodeid, comclass, index) {
+  this.log(`[zwave-node:${nodeid}] value removed: comclass=${comclass}, value[${value.index}]`)
 
   if(this.zNodes[nodeid].classes[comclass] && this.zNodes[nodeid].classes[comclass][index]) {
     delete this.zNodes[nodeid].classes[comclass][index];
   }
 }
 
-ZWAVE.prototype.zSceneEvent = function(node, nodeid, sceneid) {
-  node.log(`node [${nodeid}] scene event: sceneid=${sceneid}`)
+ZWAVE.prototype._sceneEvent = function(nodeid, sceneid) {
+  this.log(`[zwave-node:${nodeid}] scene event: sceneid=${sceneid}`)
 
   this.zNodes[nodeid].scene = sceneid;
 
-  if(node.brokerConn){
-    node.brokerConn.publish({
-      'qos': 0,
-      'retain': false,
-      'topic': `${node.topic}/${nodeid}/scene`,
-      'payload': sceneid
-    });
-  }
+  this.publish(`${this.zTopic}/${nodeid}/scene`, sceneid)
 }
 
-ZWAVE.prototype.zNotification = function(node, nodeid, notif) {
+ZWAVE.prototype._notification = function(nodeid, notif) {
   switch(notif) {
     case 0:
-      node.log(`node [${nodeid}] notification: message complete`)
+      this.log(`[zwave-node:${nodeid}] notification: message complete`)
       break;
     case 1:
-      node.log(`node [${nodeid}] notification: timeout`)
+      this.log(`[zwave-node:${nodeid}] notification: timeout`)
       break;
     case 2:
-      //node.log(`node [${nodeid}] notification: nop`)
+      //this.log(`[zwave-node:${nodeid}] notification: nop`)
       break;
     case 3:
-      node.log(`node [${nodeid}] notification: node awake`)
+      this.log(`[zwave-node:${nodeid}] notification: node awake`)
       break;
     case 4:
-      node.log(`node [${nodeid}] notification: node sleep`)
+      this.log(`[zwave-node:${nodeid}] notification: node sleep`)
       break;
     case 5:
-      node.log(`node [${nodeid}] notification: node dead`)
+      this.log(`[zwave-node:${nodeid}] notification: node dead`)
       break;
     case 6:
-      node.log(`node [${nodeid}] notification: node alive`)
+      this.log(`[zwave-node:${nodeid}] notification: node alive`)
       break;
     default:
-      //node.log(`node [${nodeid}] notification: unhandled notification`)
+      //this.log(`[zwave-node:${nodeid}] notification: unhandled notification`)
       break;
   }
-}
-
-ZWAVE.getPayloadFromMqtt = function(payload){
-  if(isUtf8(payload)) {
-    payload = payload.toString();
-  }
-  try {
-    payload = JSON.parse(payload);
-  } catch (e) {}
-  return payload
 }
 
 ZWAVE.prototype.addNode = function(){
@@ -484,13 +461,60 @@ ZWAVE.prototype.removeAllListeners = function(){
   }
 }
 
+ZWAVE.prototype.getPayloadFromMqtt = function(payload){
+  return ZWAVE.getPayloadFromMqtt(payload)
+}
+
+ZWAVE.getTagletSkale = function(type){
+  var taglet
+  switch(type) {
+    case "zwave-binary-switch":
+      taglet = "switch";
+      break;
+
+    case "zwave-light-dimmer-switch":
+      taglet = "light";
+      break;
+
+    case "zwave-remote-control-multi-purpose":
+    case "nodonSoftRemote":
+      taglet = "remote";
+      break;
+
+    case "zwave-motion-sensor":
+    case "zwave-binary-sensor":
+    case "aeotecMultiSensor":
+      taglet = "motion";
+      break;
+
+    default:
+        break;
+  }
+  return taglet
+}
+
+ZWAVE.getPayloadFromMqtt = function(payload){
+  if(isUtf8(payload)) {
+    payload = payload.toString();
+  }
+  try {
+    payload = JSON.parse(payload);
+  } catch (e) {}
+  return payload
+}
+
 ZWAVE.COMCLASS_TO_HIDE = [50,94,112,115,132,134]
 
-ZWAVE.comclassToShow = function(comclass) {
-  if(COMCLASS_TO_HIDE.indexOf(comclass) !== -1) {
-    return false
-  }
-  return true
+ZWAVE.MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+ZWAVE.pad - function(n) {
+  return n < 10 ? '0' + n.toString(10) : n.toString(10);
+}
+
+ZWAVE.timestamp = function(){
+  var d = new Date();
+  var time = [ZWAVE.pad(d.getHours()), ZWAVE.pad(d.getMinutes()), ZWAVE.pad(d.getSeconds())].join(':');
+  return [d.getDate(), ZWAVE.MONTHS[d.getMonth()], time].join(' ');
 }
 
 var instance;
