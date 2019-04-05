@@ -1,0 +1,31 @@
+{
+  "name": "ttb-lib-zwave",
+  "version": "0.1.0",
+  "description": "A set Nodejs lib for the Node-RED node ttb-node-zwave",
+  "dependencies": {
+  	"is-utf8": "0.2.1",
+    "openzwave-shared": "TheThingBox/node-openzwave-shared#6ec6bc8",
+    "ttb-lib-flows": "TheThingBox/ttb-lib-flows#06c1cc1"
+  },
+  "keywords": [
+    "thingbox",
+    "thethingbox",
+    "timesquair",
+    "Z-Wave",
+    "ZWave"
+  ],
+  "main": "index.js",
+  "engines": {
+    "node": ">=4.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thethingbox/ttb-lib-zwave.git"
+  },
+  "author": "thethingbox <thethingbox@gmail.com> (http://thethingbox.io/)",
+  "license": "http://www.wtfpl.net",
+  "bugs": {
+    "url": "https://github.com/TheThingBox/ttb-lib-zwave/issues"
+  },
+  "homepage": "https://github.com/TheThingBox/ttb-lib-zwave#readme"
+}
