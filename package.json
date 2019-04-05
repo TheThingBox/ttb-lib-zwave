@@ -5,7 +5,7 @@
   "dependencies": {
   	"is-utf8": "0.2.1",
     "openzwave-shared": "TheThingBox/node-openzwave-shared#6ec6bc8",
-    "ttb-lib-flows": "TheThingBox/ttb-lib-flows#06c1cc1"
+    "ttb-lib-flows": "TheThingBox/ttb-lib-flows#fb531d6"
   },
   "keywords": [
     "thingbox",
