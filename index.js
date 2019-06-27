@@ -1,5 +1,6 @@
 const OpenZwave = require('openzwave-shared');
 const LibFlows = require('ttb-lib-flows');
+const EventEmitter = require('events').EventEmitter;
 const isUtf8 = require('is-utf8')
 
 var ZWAVE = function(options = {}){
@@ -20,6 +21,8 @@ var ZWAVE = function(options = {}){
     SuppressValueRefresh: true
   });
 }
+
+ZWAVE.prototype = new EventEmitter()
 
 ZWAVE.prototype.init = function(node){
   if(node.broker){
@@ -50,6 +53,7 @@ ZWAVE.prototype.init = function(node){
     this._zwave.on('driver ready', homeid => {
       this.zConnected = true
       this._driverReady(homeid)
+      this.emit('driver ready', homeid)
     })
 
     this._zwave.on('driver failed', () => {
@@ -61,30 +65,37 @@ ZWAVE.prototype.init = function(node){
 
     this._zwave.on('node added', (nodeid) => {
       this._nodeAdded(nodeid)
+      this.emit('node added', nodeid)
     })
 
     this._zwave.on('node ready', (nodeid, nodeinfo) => {
       this._nodeReady(nodeid, nodeinfo)
+      this.emit('node added', nodeid, nodeinfo)
     })
 
     this._zwave.on('value added', (nodeid, comclass, value) => {
       this._valueAdded(nodeid, comclass, value)
+      this.emit('value added', nodeid, comclass, value)
     })
 
     this._zwave.on('value changed', (nodeid, comclass, value) => {
       this._valueChanged(nodeid, comclass, value)
+      this.emit('value changed', nodeid, comclass, value)
     })
 
     this._zwave.on('value removed', (nodeid, comclass, index) => {
       this._valueRemoved(nodeid, comclass, index)
+      this.emit('value removed', nodeid, comclass, value)
     })
 
     this._zwave.on('scene event', (nodeid, sceneid) => {
       this._sceneEvent(nodeid, sceneid)
+      this.emit('scene event', nodeid, sceneid)
     })
 
     this._zwave.on('notification', (nodeid, notif) => {
       this._notification(nodeid, notif)
+      this.emit('notification', nodeid, notif)
     })
 
     this._zwave.on('scan complete', () => {
