@@ -32,7 +32,7 @@ ZWAVE.prototype.init = function(node){
     this.zMqtt = node.brokerConn
   }
   if(node.log && typeof node.log === 'function'){
-    this.log = node.log
+    this.loger = node.log
   }
   if(node.warn && typeof node.warn === 'function'){
     this.warn = node.warn
@@ -111,12 +111,27 @@ ZWAVE.prototype.publish = function(topic, payload = "", qos = 0, retain = false)
   }
 }
 
-ZWAVE.prototype.log = function(...args){
-  console.log(ZWAVE.timestamp(), '- [info] [ttb-lib-flows]',...args)
+ZWAVE.prototype.log = function(who, what, prefix, ...desc){
+  let message = ''
+  const haveWho = (who!== null && typeof who !== 'undefined')?true:false
+  const haveWhat = (what!== null && typeof what !== 'undefined')?true:false
+  const havePrefix = (prefix!== null && typeof prefix !== 'undefined')?true:false
+  if(havePrefix){
+    message = `${message}${prefix}`
+  }
+  if(haveWho){
+    message = `${message}${(havePrefix===true)?' ':''}[zwave-node:${who}]`
+  }
+  message = `${message}${(haveWhat===true)?`${(haveWho===true)?' ':''}${what}`:''}${(desc.length===0)?'':' :'}`
+  this.loger(message, ...desc)
+}
+
+ZWAVE.prototype.loger = function(...args){
+  console.log(ZWAVE.timestamp(), '- [info]',...args)
 }
 
 ZWAVE.prototype.warn = function(...args){
-  console.log(ZWAVE.timestamp(), '- [warn] [ttb-lib-flows]',...args)
+  console.log(ZWAVE.timestamp(), '- [warn]',...args)
 }
 
 ZWAVE.prototype.addNewNode = function(nodes){
@@ -166,23 +181,24 @@ ZWAVE.prototype._newDevice = function(nodeid, nodeinfo) {
 }
 
 ZWAVE.prototype._dumpNodes = function(){
-  this.log("--- ZWave Dongle ---------------------");
+  this.loger("--- ZWave Dongle ---------------------")
   for(var i = 1; i < this.zNodes.length; i++) {
     if(this.zNodes[i] === null || typeof this.zNodes[i] === 'undefined'){
-      this.log(`    [zwave-node:${i}] : empty`);
+      this.log(i, null, '   ', 'empty');
       continue;
     }
     if(this.zNodes[i].hasOwnProperty("ready") && this.zNodes[i].ready === true) {
-      this.log(`    [zwave-node:${i}] : ${this.zNodes[i].toString()}`);
+      this.log(i, null, '   ', this.zNodes[i].toString())
     } else {
-      var alive="";
+      var message="";
       if(Object.keys(this.zNodes[i].classes).length > 1){
-        alive = "alive but ";
+        message = "alive but ";
       }
-      this.log(`    [zwave-node:${i}] : ${alive}no infos yet`);
+      message = `${message}no infos yet`
+      this.log(i, null, '   ', message)
     }
   }
-  this.log("--------------------------------------");
+  this.loger("--------------------------------------");
 }
 
 ZWAVE.prototype._prepareNode = function(node){
@@ -323,8 +339,8 @@ ZWAVE.prototype._fillNode = function(node, productid){
 }
 
 ZWAVE.prototype._driverReady = function (homeid) {
-  this.log('Driver ready');
-  this.log('Scanning homeid=0x' + homeid.toString(16) + '...');
+  this.log('driver', ZAWAVE.EVENTS.READY);
+  this.log('1', ZWAVE.EVENTS.SCANNING, null, 'homeid=0x' + homeid.toString(16) + '...');
 }
 
 ZWAVE.prototype._driverFailed = function() {
@@ -359,7 +375,7 @@ ZWAVE.prototype._nodeReady = function(nodeid, nodeinfo) {
   this.zNodes[nodeid].name = nodeinfo.name;
   this.zNodes[nodeid].loc = nodeinfo.loc;
   this.zNodes[nodeid].ready = true;
-  this.log(`[zwave-node:${nodeid}] ready: ${this.zNodes[nodeid].toString()}`)
+  this.log(nodeid, ZAWAVE.EVENTS.READY, null, this.zNodes[nodeid].toString())
 
   if(nodeinfo.manufacturer && nodeinfo.product){
     if(nodeid !== 1) {
@@ -379,7 +395,7 @@ ZWAVE.prototype._nodeReady = function(nodeid, nodeinfo) {
 }
 
 ZWAVE.prototype._valueAdded = function(nodeid, comclass, value) {
-  this.log(`[zwave-node:${nodeid}] value added: comclass=${comclass}; value[${value.index}]['${value.label}']=${value.value}`)
+  this.log(nodeid, ZWAVE.EVENTS.VALUE_ADDED, null, `comclass=${comclass}; value[${value.index}]['${value.label}']=${value.value}`)
 
   if(!this.zNodes[nodeid].classes[comclass]) {
     this.zNodes[nodeid].classes[comclass] = {};
@@ -399,7 +415,7 @@ ZWAVE.prototype._valueChanged = function(nodeid, comclass, value) {
 }
 
 ZWAVE.prototype._valueRemoved = function(nodeid, comclass, index) {
-  this.log(`[zwave-node:${nodeid}] value removed: comclass=${comclass}, value[${value.index}]`)
+  this.log(nodeid, ZAWAVE.EVENTS.VALUE_REMOVED, null, `comclass=${comclass}, value[${value.index}]` )
 
   if(this.zNodes[nodeid].classes[comclass] && this.zNodes[nodeid].classes[comclass][index]) {
     delete this.zNodes[nodeid].classes[comclass][index];
@@ -407,7 +423,7 @@ ZWAVE.prototype._valueRemoved = function(nodeid, comclass, index) {
 }
 
 ZWAVE.prototype._sceneEvent = function(nodeid, sceneid) {
-  this.log(`[zwave-node:${nodeid}] scene event: sceneid=${sceneid}`)
+  this.log(nodeid, ZAWAVE.EVENTS.SCENE, `sceneid=${sceneid}`)
 
   this.zNodes[nodeid].scene = sceneid;
 
@@ -417,28 +433,28 @@ ZWAVE.prototype._sceneEvent = function(nodeid, sceneid) {
 ZWAVE.prototype._notification = function(nodeid, notif) {
   switch(notif) {
     case 0:
-      this.log(`[zwave-node:${nodeid}] notification: message complete`)
+      this.log(nodeid, ZAWAVE.EVENTS.NOTIFICATION, 'message complete')
       break;
     case 1:
-      this.log(`[zwave-node:${nodeid}] notification: timeout`)
+      this.log(nodeid, ZAWAVE.EVENTS.NOTIFICATION, 'timeout')
       break;
     case 2:
-      //this.log(`[zwave-node:${nodeid}] notification: nop`)
+      //this.log(nodeid, ZAWAVE.EVENTS.NOTIFICATION, 'nop')
       break;
     case 3:
-      this.log(`[zwave-node:${nodeid}] notification: node awake`)
+      this.log(nodeid, ZAWAVE.EVENTS.NOTIFICATION, 'node awake')
       break;
     case 4:
-      this.log(`[zwave-node:${nodeid}] notification: node sleep`)
+      //this.log(nodeid, ZAWAVE.EVENTS.NOTIFICATION, 'node sleep')
       break;
     case 5:
-      this.log(`[zwave-node:${nodeid}] notification: node dead`)
+      this.log(nodeid, ZAWAVE.EVENTS.NOTIFICATION, 'node dead')
       break;
     case 6:
-      this.log(`[zwave-node:${nodeid}] notification: node alive`)
+      this.log(nodeid, ZAWAVE.EVENTS.NOTIFICATION, 'node alive')
       break;
     default:
-      //this.log(`[zwave-node:${nodeid}] notification: unhandled notification`)
+      //this.log(nodeid, ZAWAVE.EVENTS.NOTIFICATION, 'unhandled notification')
       break;
   }
 }
@@ -505,7 +521,16 @@ ZWAVE.getPayloadFromMqtt = function(payload){
 
 ZWAVE.COMCLASS_TO_HIDE = [50,94,112,115,132,134]
 
-ZWAVE.MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+ZWAVE.MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+ZWAVE.EVENTS = {
+  'VALUE_ADDED': 'value added',
+  'NOTIFICATION': 'notification',
+  'READY': 'ready',
+  'SCANNING': 'scanning',
+  'VALUE_REMOVED': 'value removed',
+  'SCENE': 'scene event'
+}
 
 ZWAVE.pad - function(n) {
   return n < 10 ? '0' + n.toString(10) : n.toString(10);
