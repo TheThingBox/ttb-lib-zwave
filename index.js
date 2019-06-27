@@ -324,7 +324,16 @@ ZWAVE.prototype._fillNode = function(node, productid){
       this._zwave.setConfigParam(node.senderID, 4, 1, 1);  // Enable PIR sensor
       this._zwave.setConfigParam(node.senderID, 5, 1, 1);  // Send PIR detection on binary sensor command class
       break;
-
+    case "0159-0002-0051": // ZWave Qubino Flush 2 Relay
+      // NOT tested
+      if(node.senderID !== undefined) {
+        node.typeNode = "zwave-binary-switch"
+      } else {
+        node.type = "zwave-binary-switch"
+      }
+      node.commandclass = Object.keys(nodes[node.senderID].classes)[0];
+      node.classindex = Object.keys(nodes[node.senderID].classes[node.commandclass])[0];
+      break;
     default:
       console.log("Node " + node.senderID + " handled as generic. (productID:" +productid + ")");
       if(node.senderID !== undefined) {
