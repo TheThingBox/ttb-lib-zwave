@@ -1,11 +1,11 @@
 {
   "name": "ttb-lib-zwave",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A set Nodejs lib for the Node-RED node ttb-node-zwave",
   "dependencies": {
     "is-utf8": "0.2.1",
     "openzwave-shared": "TheThingBox/node-openzwave-shared#6ec6bc8",
-    "ttb-lib-flows": "TheThingBox/ttb-lib-flows#93aecf8"
+    "ttb-lib-flows": "TheThingBox/ttb-lib-flows#b2d3819"
   },
   "keywords": [
     "thingbox",
