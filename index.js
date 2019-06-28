@@ -14,6 +14,21 @@ var ZWAVE = function(options = {}){
   this.zNodes = []
 
   this.libFlows = new LibFlows(options.libFlows || {})
+
+  /*
+    Used options :
+      | SaveConfiguration    | Bool    | When Shutting Down, should the library automatically save the Network Configuration in zwcfg_.xml_
+      | Logging              | Bool    | Enable Logging in the Library or not.
+      | ConsoleOutput        | Bool    | 	Enable log output to stdout (or console)
+      | SuppressValueRefresh | Bool    | After a Value is Refreshed, should we send a notification to the application
+
+    Options that should be used:
+      | PollInterval         | Integer | How long we should spend polling the entire network, or how long between polls we should wait. (See IntervalBetweenPolls)
+      |                                  The time period in milliseconds between polls of a nodes value. Be careful about using polling values below 30000 (30 seconds) as polling can flood the zwave network and cause problems. Default value: 60000
+      | IntervalBetweenPolls | Bool    | Should the above value be how long to wait between polling the network devices, or how often all devices should be polled
+
+    Other options : https://github.com/OpenZWave/open-zwave/wiki/Config-Options
+  */
   this._zwave = new OpenZwave({
     SaveConfiguration: false,
     Logging: false,
@@ -254,6 +269,26 @@ ZWAVE.prototype._prepareNode = function(node){
 }
 
 ZWAVE.prototype._fillNode = function(node, productid){
+  /*
+    bool Manager::SetConfigParam	(
+      uint32 const  _homeId,
+      uint8 const   _nodeId,
+      uint8 const   _param,
+      int32         _value,
+      uint8 const   _size = 2
+    )
+    Set the value of a configurable parameter in a device. Some devices have various parameters that can be configured to control the device behavior.
+    These are not reported by the device over the Z-Wave network, but can usually be found in the device's user manual.
+    This method returns immediately, without waiting for confirmation from the device that the change has been made.
+    Parameters :
+      _homeId  The Home ID of the Z-Wave controller that manages the node.
+      _nodeId  The ID of the node to configure.
+      _param   The index of the parameter.
+      _value   The value to which the parameter should be set.
+      _size    Is an optional number of bytes to be sent for the parameter _value. Defaults to 2.
+    Returns :
+      true if the a message setting the value was sent to the device.
+  */
   switch (productid) {
     case "0086-0003-0062": // Aeotec, ZW098 LED Bulb
     case "0086-0103-0062": // Aeotec, ZW098 LED Bulb
@@ -332,7 +367,7 @@ ZWAVE.prototype._fillNode = function(node, productid){
       node.commandclass = "48";
       node.classindex = "0";
       this._zwave.setConfigParam(node.senderID, 3, 30, 2); // Set the time(sec) that the PIR stay ON before sending OFF
-      this._zwave.setConfigParam(node.senderID, 4, 1, 1);  // Enable PIR sensor
+      this._zwave.setConfigParam(node.senderID, 4, 1, 1);  // PIR sensitivity
       this._zwave.setConfigParam(node.senderID, 5, 1, 1);  // Send PIR detection on binary sensor command class
       break;
     case "0159-0002-0051": // ZWave Qubino Flush 2 Relay
@@ -398,7 +433,7 @@ ZWAVE.prototype._nodeReady = function(nodeid, nodeinfo) {
   this.log(nodeid, ZAWAVE.EVENTS.READY, null, this.zNodes[nodeid].toString())
 
   if(nodeinfo.manufacturer && nodeinfo.product){
-    if(nodeid !== 1) {
+    if(nodeid !== 1) { // the 1 is the ZWave stick
       this._newDevice(nodeid, nodeinfo);
     }
 
