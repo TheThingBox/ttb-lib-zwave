@@ -470,7 +470,7 @@ ZWAVE.prototype._valueChanged = function(nodeid, comclass, value) {
 }
 
 ZWAVE.prototype._valueRemoved = function(nodeid, comclass, index) {
-  this.log(nodeid, ZWAVE.EVENTS.VALUE_REMOVED, null, `comclass=${comclass}, value[${value.index}]` )
+  this.log(nodeid, ZWAVE.EVENTS.VALUE_REMOVED, null, `comclass=${comclass}, value[${index}]` )
 
   if(this.zNodes[nodeid].classes[comclass] && this.zNodes[nodeid].classes[comclass][index]) {
     delete this.zNodes[nodeid].classes[comclass][index];
