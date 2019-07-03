@@ -100,7 +100,7 @@ ZWAVE.prototype.init = function(node){
 
     this._zwave.on('value removed', (nodeid, comclass, index) => {
       this._valueRemoved(nodeid, comclass, index)
-      this.emit('value removed', nodeid, comclass, value)
+      this.emit('value removed', nodeid, comclass, index)
     })
 
     this._zwave.on('scene event', (nodeid, sceneid) => {
