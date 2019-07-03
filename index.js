@@ -587,7 +587,7 @@ ZWAVE.EVENTS = {
   'SCENE': 'scene event'
 }
 
-ZWAVE.pad - function(n) {
+ZWAVE.pad = function(n) {
   return n < 10 ? '0' + n.toString(10) : n.toString(10);
 }
 
