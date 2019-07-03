@@ -394,7 +394,7 @@ ZWAVE.prototype._fillNode = function(node, productid){
 }
 
 ZWAVE.prototype._driverReady = function (homeid) {
-  this.log('driver', ZAWAVE.EVENTS.READY);
+  this.log('driver', ZWAVE.EVENTS.READY);
   this.log('1', ZWAVE.EVENTS.SCANNING, null, 'homeid=0x' + homeid.toString(16) + '...');
 }
 
@@ -430,7 +430,7 @@ ZWAVE.prototype._nodeReady = function(nodeid, nodeinfo) {
   this.zNodes[nodeid].name = nodeinfo.name;
   this.zNodes[nodeid].loc = nodeinfo.loc;
   this.zNodes[nodeid].ready = true;
-  this.log(nodeid, ZAWAVE.EVENTS.READY, null, this.zNodes[nodeid].toString())
+  this.log(nodeid, ZWAVE.EVENTS.READY, null, this.zNodes[nodeid].toString())
 
   if(nodeinfo.manufacturer && nodeinfo.product){
     if(nodeid !== 1) { // the 1 is the ZWave stick
@@ -470,7 +470,7 @@ ZWAVE.prototype._valueChanged = function(nodeid, comclass, value) {
 }
 
 ZWAVE.prototype._valueRemoved = function(nodeid, comclass, index) {
-  this.log(nodeid, ZAWAVE.EVENTS.VALUE_REMOVED, null, `comclass=${comclass}, value[${value.index}]` )
+  this.log(nodeid, ZWAVE.EVENTS.VALUE_REMOVED, null, `comclass=${comclass}, value[${value.index}]` )
 
   if(this.zNodes[nodeid].classes[comclass] && this.zNodes[nodeid].classes[comclass][index]) {
     delete this.zNodes[nodeid].classes[comclass][index];
@@ -478,7 +478,7 @@ ZWAVE.prototype._valueRemoved = function(nodeid, comclass, index) {
 }
 
 ZWAVE.prototype._sceneEvent = function(nodeid, sceneid) {
-  this.log(nodeid, ZAWAVE.EVENTS.SCENE, `sceneid=${sceneid}`)
+  this.log(nodeid, ZWAVE.EVENTS.SCENE, `sceneid=${sceneid}`)
 
   this.zNodes[nodeid].scene = sceneid;
 
@@ -488,28 +488,28 @@ ZWAVE.prototype._sceneEvent = function(nodeid, sceneid) {
 ZWAVE.prototype._notification = function(nodeid, notif) {
   switch(notif) {
     case 0:
-      this.log(nodeid, ZAWAVE.EVENTS.NOTIFICATION, 'message complete')
+      this.log(nodeid, ZWAVE.EVENTS.NOTIFICATION, 'message complete')
       break;
     case 1:
-      this.log(nodeid, ZAWAVE.EVENTS.NOTIFICATION, 'timeout')
+      this.log(nodeid, ZWAVE.EVENTS.NOTIFICATION, 'timeout')
       break;
     case 2:
-      //this.log(nodeid, ZAWAVE.EVENTS.NOTIFICATION, 'nop')
+      //this.log(nodeid, ZWAVE.EVENTS.NOTIFICATION, 'nop')
       break;
     case 3:
-      this.log(nodeid, ZAWAVE.EVENTS.NOTIFICATION, 'node awake')
+      this.log(nodeid, ZWAVE.EVENTS.NOTIFICATION, 'node awake')
       break;
     case 4:
-      //this.log(nodeid, ZAWAVE.EVENTS.NOTIFICATION, 'node sleep')
+      //this.log(nodeid, ZWAVE.EVENTS.NOTIFICATION, 'node sleep')
       break;
     case 5:
-      this.log(nodeid, ZAWAVE.EVENTS.NOTIFICATION, 'node dead')
+      this.log(nodeid, ZWAVE.EVENTS.NOTIFICATION, 'node dead')
       break;
     case 6:
-      this.log(nodeid, ZAWAVE.EVENTS.NOTIFICATION, 'node alive')
+      this.log(nodeid, ZWAVE.EVENTS.NOTIFICATION, 'node alive')
       break;
     default:
-      //this.log(nodeid, ZAWAVE.EVENTS.NOTIFICATION, 'unhandled notification')
+      //this.log(nodeid, ZWAVE.EVENTS.NOTIFICATION, 'unhandled notification')
       break;
   }
 }
