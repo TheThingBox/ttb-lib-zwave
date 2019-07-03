@@ -79,36 +79,43 @@ ZWAVE.prototype.init = function(node){
     })
 
     this._zwave.on('node added', (nodeid) => {
+      nodeid = ZWAVE.ensureNumber(nodeid)
       this._nodeAdded(nodeid)
       this.emit('node added', nodeid)
     })
 
     this._zwave.on('node ready', (nodeid, nodeinfo) => {
+      nodeid = ZWAVE.ensureNumber(nodeid)
       this._nodeReady(nodeid, nodeinfo)
       this.emit('node added', nodeid, nodeinfo)
     })
 
     this._zwave.on('value added', (nodeid, comclass, value) => {
+      nodeid = ZWAVE.ensureNumber(nodeid)
       this._valueAdded(nodeid, comclass, value)
       this.emit('value added', nodeid, comclass, value)
     })
 
     this._zwave.on('value changed', (nodeid, comclass, value) => {
+      nodeid = ZWAVE.ensureNumber(nodeid)
       this._valueChanged(nodeid, comclass, value)
       this.emit('value changed', nodeid, comclass, value)
     })
 
     this._zwave.on('value removed', (nodeid, comclass, index) => {
+      nodeid = ZWAVE.ensureNumber(nodeid)
       this._valueRemoved(nodeid, comclass, index)
       this.emit('value removed', nodeid, comclass, index)
     })
 
     this._zwave.on('scene event', (nodeid, sceneid) => {
+      nodeid = ZWAVE.ensureNumber(nodeid)
       this._sceneEvent(nodeid, sceneid)
       this.emit('scene event', nodeid, sceneid)
     })
 
     this._zwave.on('notification', (nodeid, notif) => {
+      nodeid = ZWAVE.ensureNumber(nodeid)
       this._notification(nodeid, notif)
       this.emit('notification', nodeid, notif)
     })
@@ -189,6 +196,7 @@ ZWAVE.prototype.getComclassToHide = function(){
 }
 
 ZWAVE.prototype._newDevice = function(nodeid, nodeinfo) {
+  nodeid = ZWAVE.ensureNumber(nodeid)
   const manufacturerid = nodeinfo.manufacturerid.slice(2, nodeinfo.manufacturerid.length);
   const producttype = nodeinfo.producttype.slice(2, nodeinfo.producttype.length);
   const productid = nodeinfo.productid.slice(2, nodeinfo.productid.length);
@@ -228,6 +236,9 @@ ZWAVE.prototype._dumpNodes = function(){
 }
 
 ZWAVE.prototype._prepareNode = function(node){
+  if(node && node.hasOwnProperty('senderID')){
+    node.senderID = ZWAVE.ensureNumber(node.senderID)
+  }
   if(node.commandclass !== undefined && node.classindex !== undefined && this.zNodes[node.senderID].classes[node.commandclass] !== undefined && this.zNodes[node.senderID].classes[node.commandclass][node.classindex] !== undefined) {
     node.classindexname = this.zNodes[node.senderID].classes[node.commandclass][node.classindex].label;
   }
@@ -269,6 +280,9 @@ ZWAVE.prototype._prepareNode = function(node){
 }
 
 ZWAVE.prototype._fillNode = function(node, productid){
+  if(node && node.hasOwnProperty('senderID')){
+    node.senderID = ZWAVE.ensureNumber(node.senderID)
+  }
   /*
     bool Manager::SetConfigParam	(
       uint32 const  _homeId,
@@ -403,6 +417,7 @@ ZWAVE.prototype._driverFailed = function() {
 }
 
 ZWAVE.prototype._nodeAdded = function(nodeid) {
+  nodeid = ZWAVE.ensureNumber(nodeid)
   this.zNodes[nodeid] = {
     manufacturer: '',
     manufacturerid: '',
@@ -421,6 +436,7 @@ ZWAVE.prototype._nodeAdded = function(nodeid) {
 }
 
 ZWAVE.prototype._nodeReady = function(nodeid, nodeinfo) {
+  nodeid = ZWAVE.ensureNumber(nodeid)
   this.zNodes[nodeid].manufacturer = nodeinfo.manufacturer;
   this.zNodes[nodeid].manufacturerid = nodeinfo.manufacturerid;
   this.zNodes[nodeid].product = nodeinfo.product;
@@ -450,6 +466,7 @@ ZWAVE.prototype._nodeReady = function(nodeid, nodeinfo) {
 }
 
 ZWAVE.prototype._valueAdded = function(nodeid, comclass, value) {
+  nodeid = ZWAVE.ensureNumber(nodeid)
   this.log(nodeid, ZWAVE.EVENTS.VALUE_ADDED, null, `comclass=${comclass}; value[${value.index}]['${value.label}']=${value.value}`)
 
   if(!this.zNodes[nodeid].classes[comclass]) {
@@ -462,6 +479,7 @@ ZWAVE.prototype._valueAdded = function(nodeid, comclass, value) {
 }
 
 ZWAVE.prototype._valueChanged = function(nodeid, comclass, value) {
+  nodeid = ZWAVE.ensureNumber(nodeid)
   if(this.zNodes[nodeid].classes[comclass][value.index].value !== undefined && value.value !== this.zNodes[nodeid].classes[comclass][value.index].value) {
     this.zNodes[nodeid].classes[comclass][value.index] = value;
 
@@ -470,6 +488,7 @@ ZWAVE.prototype._valueChanged = function(nodeid, comclass, value) {
 }
 
 ZWAVE.prototype._valueRemoved = function(nodeid, comclass, index) {
+  nodeid = ZWAVE.ensureNumber(nodeid)
   this.log(nodeid, ZWAVE.EVENTS.VALUE_REMOVED, null, `comclass=${comclass}, value[${index}]` )
 
   if(this.zNodes[nodeid].classes[comclass] && this.zNodes[nodeid].classes[comclass][index]) {
@@ -478,6 +497,7 @@ ZWAVE.prototype._valueRemoved = function(nodeid, comclass, index) {
 }
 
 ZWAVE.prototype._sceneEvent = function(nodeid, sceneid) {
+  nodeid = ZWAVE.ensureNumber(nodeid)
   this.log(nodeid, ZWAVE.EVENTS.SCENE, `sceneid=${sceneid}`)
 
   this.zNodes[nodeid].scene = sceneid;
@@ -486,6 +506,7 @@ ZWAVE.prototype._sceneEvent = function(nodeid, sceneid) {
 }
 
 ZWAVE.prototype._notification = function(nodeid, notif) {
+  nodeid = ZWAVE.ensureNumber(nodeid)
   switch(notif) {
     case 0:
       this.log(nodeid, ZWAVE.EVENTS.NOTIFICATION, 'message complete')
@@ -522,6 +543,7 @@ ZWAVE.prototype.addNode = function(){
 
 ZWAVE.prototype.setValue = function(nodeid, classe, a, b, c){
   if(this.zConnected){
+    nodeid = ZWAVE.ensureNumber(nodeid)
     this._zwave.setValue(nodeid, classe, a, b, c)
   }
 }
@@ -595,6 +617,30 @@ ZWAVE.timestamp = function(){
   var d = new Date();
   var time = [ZWAVE.pad(d.getHours()), ZWAVE.pad(d.getMinutes()), ZWAVE.pad(d.getSeconds())].join(':');
   return [d.getDate(), ZWAVE.MONTHS[d.getMonth()], time].join(' ');
+}
+
+ZWAVE.ensureString = function(o){
+  if(typeof o === 'undefined'){
+    return o
+  } else if (Buffer.isBuffer(o)) {
+    return o.toString();
+  } else if (typeof o === "object") {
+    return JSON.stringify(o);
+  } else if (typeof o === "string") {
+    return o;
+  }
+  return ""+o;
+}
+
+ZWAVE.ensureNumber = function(o){
+  if(typeof o === 'undefined'){
+    return o
+  }
+  o = parseInt(o)
+  if(isNaN(o)){
+    return 0
+  }
+  return o
 }
 
 var instance;
