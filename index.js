@@ -49,12 +49,6 @@ ZWAVE.prototype.init = function(node){
   if(node.brokerConn){
     this.zMqtt = node.brokerConn
   }
-  if(node.log && typeof node.log === 'function'){
-    this.loger = node.log
-  }
-  if(node.warn && typeof node.warn === 'function'){
-    this.warn = node.warn
-  }
   return new Promise( (resolve, reject) => {
     var rejected = false
     this._zwave.removeAllListeners()
